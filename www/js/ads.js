@@ -98,6 +98,13 @@ export const Ads = {
     }
   },
 
+  /** Achat « Sans pub » : coupe bannières et interstitielles (les vidéos récompensées restent). */
+  setRemoveAds(v) {
+    removeAds = !!v;
+    if (removeAds) this.hideBanner();
+  },
+  get removeAds() { return removeAds; },
+
   /** Faut-il afficher un bouton « Confidentialité » dans les réglages ? */
   get privacyOptionsRequired() { return privacyRequired; },
 

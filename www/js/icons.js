@@ -19,5 +19,9 @@ export const ICONS = {
   music: svg('<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.6" fill="currentColor"/><circle cx="17.5" cy="16" r="2.6" fill="currentColor"/>'),
   sound: svg('<path fill="currentColor" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.3 6.3a8.4 8.4 0 0 1 0 11.4"/>'),
   vibrate: svg('<rect x="7.5" y="3.5" width="9" height="17" rx="2"/><path d="M4 8.5v7M20 8.5v7"/>'),
+  cart: svg('<path d="M3 4h2.5l2.2 11h10.6l2.2-8H7"/><circle cx="9.5" cy="19.5" r="1.6" fill="currentColor"/><circle cx="17" cy="19.5" r="1.6" fill="currentColor"/>'),
+  bell: svg('<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21h4"/>'),
+  noads: svg('<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M8.5 15l1.8-6h.4l1.8 6M9 13.2h2.8M14.5 9h1.6a2.2 2.2 0 0 1 0 6h-1.6z"/><path d="M3.5 3.5l17 17" stroke-width="2.6"/>'),
+  chest: svg('<path d="M3.5 10.5h17v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z" fill="currentColor" fill-opacity=".25"/><path d="M3.5 10.5V8a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4v2.5z"/><rect x="10" y="9" width="4" height="4.5" rx="1" fill="currentColor"/><path d="M3.5 10.5h17"/>'),
   map: svg('<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>'),
 };

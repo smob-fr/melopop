@@ -38,6 +38,7 @@
       <button id="play" class="btn big play-btn" data-icon="play"><span id="play-label">Commencer</span></button>
       <div class="home-row">
         <button id="gift-btn" class="round-btn" data-icon="gift"><span>Cadeau</span></button>
+        <button id="home-shop" class="round-btn" data-icon="cart"><span>Boutique</span></button>
         <button id="home-help" class="round-btn" data-icon="help"><span>Aide</span></button>
         <button id="home-settings" class="round-btn" data-icon="gear"><span>Réglages</span></button>
       </div>
@@ -50,6 +51,7 @@
       <button id="map-back" class="icon-btn" data-icon="back" aria-label="Accueil"></button>
       <button class="pill lives-btn" data-icon="heart"><span class="lives">5</span><small class="lives-timer"></small></button>
       <div class="pill star-pill" data-icon="star"><span class="total-stars">0</span></div>
+      <button id="map-shop" class="icon-btn" data-icon="cart" aria-label="Boutique"></button>
       <button id="map-settings" class="icon-btn" data-icon="gear" aria-label="Réglages"></button>
     </header>
     <div id="level-list"></div>
@@ -85,6 +87,17 @@
       <span class="icon-btn ghost-spacer"></span>
     </header>
     <div id="help-list"></div>
+  </section>
+
+  <!-- Boutique -->
+  <section id="shop" class="screen">
+    <header class="bar">
+      <button id="shop-back" class="icon-btn" data-icon="back" aria-label="Retour"></button>
+      <h2 class="bar-title">Boutique</h2>
+      <span class="icon-btn ghost-spacer"></span>
+    </header>
+    <div id="shop-inv" class="shop-inv"></div>
+    <div id="shop-list"></div>
   </section>
 
   <!-- Tutoriel -->

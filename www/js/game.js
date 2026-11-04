@@ -4,6 +4,8 @@ import { Ads } from "./ads.js";
 import { Sound } from "./sound.js";
 import { FX, PALETTE } from "./fx.js";
 import { ICONS } from "./icons.js";
+import { Store, PRODUCTS } from "./store.js";
+import { Notify } from "./notify.js";
 
 const VERSION = "2.0.0";
 const N = 8;
@@ -30,12 +32,14 @@ const DEFAULT_SAVE = () => ({
   unlocked: 1, stars: {}, best: {}, lives: MAX_LIVES, livesTs: Date.now(),
   sound: true, music: true, haptics: true, boosters: { hammer: 3, shuffle: 2 },
   lastGift: "", tutorialDone: false, intros: {},
+  noAds: false, bought: {}, notif: null, // notif : null = pas encore proposé
 });
 const save = (() => {
   const d = DEFAULT_SAVE();
   try { Object.assign(d, JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch (e) { /* vide */ }
   d.boosters = { hammer: 3, shuffle: 2, ...d.boosters };
   d.intros = d.intros || {};
+  d.bought = d.bought || {};
   return d;
 })();
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* stockage indisponible */ } }
@@ -577,11 +581,13 @@ async function onBooster(kind) {
     modal(`<div class="modal-icon">${ICONS[kind]}</div><h2>${label}</h2>
       <p>Tu n'en as plus. Regarde une courte vidéo pour en obtenir un.</p>
       <button class="btn big reward" data-act="reward">${ICONS.video} Obtenir 1 ${label.toLowerCase()}</button>
+      <button class="btn" data-act="shop">${ICONS.cart} Voir la boutique</button>
       <button class="btn ghost" data-act="close">Non merci</button>`, async (act) => {
       if (act === "reward" && (await Ads.rewarded())) {
         save.boosters[kind]++; persist(); updateBoosters();
         Sound.gift();
       }
+      if (act === "shop") openShop("game");
     });
     return;
   }
@@ -1093,6 +1099,7 @@ function onWin() {
       ${level.number < LEVEL_COUNT ? `<button class="btn big" data-act="next">Suivant ${ICONS.play}</button>` : ""}
     </div>`, async (act) => {
     await Ads.maybeInterstitial(level.number);
+    if (level.number >= 2 && save.notif === null && Notify.supported) await askNotifications();
     if (act === "next") levelCard(level.number); else openMap();
   });
   // Les étoiles s'allument une à une, puis le score défile.
@@ -1158,8 +1165,14 @@ function onLose() {
 function showNoLives(index) {
   modal(`<div class="lives-big">${ICONS.heart}<b>${save.lives}</b></div><h2>${save.lives ? "Vies" : "Plus de vies"}</h2>
     <p>${save.lives >= MAX_LIVES ? "Tes vies sont au maximum." : `Prochaine vie dans <b id="life-timer">${nextLifeIn()}</b>`}</p>
-    ${save.lives < MAX_LIVES ? `<button class="btn big reward" data-act="reward">${ICONS.video} Regarder une vidéo : +1 vie</button>` : ""}
+    ${save.lives < MAX_LIVES ? `<button class="btn big reward" data-act="reward">${ICONS.video} Regarder une vidéo : +1 vie</button>
+      <button class="btn" data-act="buy">${ICONS.heart} Toutes mes vies : ${Store.priceOf(productById("melopop_lives"))}</button>` : ""}
     <button class="btn ghost" data-act="close">${save.lives ? "Fermer" : "Plus tard"}</button>`, async (act) => {
+    if (act === "buy") {
+      const ok = await purchase(productById("melopop_lives"));
+      if (ok && index !== undefined) startLevel(index);
+      return;
+    }
     if (act === "reward" && (await Ads.rewarded())) {
       save.lives = Math.min(MAX_LIVES, save.lives + 1); persist();
       updateLivesUi();
@@ -1329,8 +1342,10 @@ function openSettings(fromGame = false) {
       ${toggleRow("sfx", "Effets sonores", "sound", Sound.sfx)}
       ${toggleRow("music", "Musique", "music", Sound.music)}
       ${toggleRow("haptics", "Vibrations", "vibrate", Sound.haptics)}
+      ${Notify.supported ? toggleRow("notif", "Rappels", "bell", save.notif === true) : ""}
     </div>
     ${fromGame ? "" : `<button class="btn" data-act="tuto">Revoir le tutoriel</button>`}
+    ${fromGame ? "" : `<button class="btn" data-act="restore">Restaurer mes achats</button>`}
     <button class="btn" data-act="help">Comment jouer</button>
     ${Ads.privacyOptionsRequired ? `<button class="btn" data-act="privacy">Confidentialité et publicité</button>` : ""}
     ${fromGame ? "" : `<button class="btn ghost danger" data-act="reset">Effacer ma progression</button>`}
@@ -1339,7 +1354,19 @@ function openSettings(fromGame = false) {
     if (act === "sfx") { Sound.sfx = !Sound.sfx; save.sound = Sound.sfx; persist(); openSettings(fromGame); }
     if (act === "music") { Sound.music = !Sound.music; save.music = Sound.music; persist(); openSettings(fromGame); }
     if (act === "haptics") { Sound.haptics = !Sound.haptics; save.haptics = Sound.haptics; persist(); openSettings(fromGame); }
+    if (act === "notif") {
+      (async () => {
+        if (save.notif === true) save.notif = false;
+        else save.notif = await Notify.request();
+        persist();
+        if (!save.notif && (await Notify.permission()) === "denied") {
+          modal(`<h2>Rappels bloqués</h2><p>Les notifications sont désactivées pour Mélo Pop dans les réglages de ton téléphone. Active-les là-bas, puis reviens ici.</p>
+            <button class="btn big" data-act="close">OK</button>`, () => openSettings(fromGame));
+        } else openSettings(fromGame);
+      })();
+    }
     if (act === "tuto") startLevel(0, { replayTutorial: true });
+    if (act === "restore") restorePurchases();
     if (act === "help") openHelp(fromGame ? "game" : currentScreen);
     if (act === "privacy") Ads.showPrivacyOptions();
     if (act === "reset") confirmReset();
@@ -1381,6 +1408,106 @@ function pause() {
   });
 }
 function resumeGame() { scheduleHint(); }
+
+/* ---------------------------------------------------------------------- */
+/* Boutique                                                               */
+/* ---------------------------------------------------------------------- */
+const productById = (id) => PRODUCTS.find((p) => p.id === id);
+const SHOP_ART = {
+  noads: () => `<div class="shop-art noads">${ICONS.noads}</div>`,
+  starter: () => `<div class="shop-art">${ICONS.gift}</div>`,
+  small: () => `<div class="shop-art pair">${ICONS.hammer}${ICONS.shuffle}</div>`,
+  big: () => `<div class="shop-art chest-art">${ICONS.chest}</div>`,
+  lives: () => `<div class="shop-art heart">${ICONS.heart}</div>`,
+};
+
+function grantProduct(p) {
+  const g = p.grant || {};
+  if (g.hammer) save.boosters.hammer += g.hammer;
+  if (g.shuffle) save.boosters.shuffle += g.shuffle;
+  if (g.lives === "full") { save.lives = Math.max(save.lives, MAX_LIVES); save.livesTs = Date.now(); }
+  if (p.type === "noads") { save.noAds = true; Ads.setRemoveAds(true); }
+  if (p.type === "once") save.bought[p.id] = true;
+  persist();
+  updateLivesUi();
+  if (currentScreen === "game") updateBoosters();
+}
+
+/** Achète un produit, l'accorde et affiche le résultat. Résout true si l'achat a réussi. */
+async function purchase(p) {
+  Sound.tap();
+  const res = await Store.buy(p);
+  if (!res.ok) {
+    if (res.error) modal(`<h2>Achat impossible</h2><p>${res.error}</p><button class="btn big" data-act="close">OK</button>`);
+    return false;
+  }
+  grantProduct(p);
+  Sound.gift();
+  FX.confetti();
+  await new Promise((done) => modal(`<small class="eyebrow">Merci !</small>${SHOP_ART[p.art]()}<h2>${p.title}</h2>
+    <p>${p.type === "noads" ? "Les publicités sont supprimées. Merci de soutenir Mélo Pop !" : "C'est ajouté à ton inventaire."}</p>
+    <button class="btn big" data-act="close">Super !</button>`, done));
+  if (currentScreen === "shop") renderShop();
+  return true;
+}
+
+async function restorePurchases() {
+  const res = await Store.restore();
+  const msg = !res.ok ? "La restauration n'a pas abouti. Vérifie ta connexion et réessaie."
+    : res.noAds || save.noAds ? "Ton achat « Sans pub » est bien actif sur cet appareil."
+    : "Aucun achat à restaurer pour ce compte.";
+  modal(`<h2>Restaurer mes achats</h2><p>${msg}</p><button class="btn big" data-act="close">OK</button>`);
+  if (currentScreen === "shop") renderShop();
+}
+
+let shopReturn = "home";
+function openShop(ret = currentScreen) {
+  shopReturn = ret;
+  showScreen("shop", renderShop);
+  Ads.hideBanner();
+}
+function closeShop() {
+  if (shopReturn === "game") { showScreen("game"); resumeGame(); }
+  else if (shopReturn === "map") openMap();
+  else openHome();
+}
+function renderShop() {
+  const items = PRODUCTS.filter((p) => !(p.type === "once" && save.bought[p.id]));
+  $("#shop-inv").innerHTML = `<span>${ICONS.hammer}<b>${save.boosters.hammer}</b></span><span>${ICONS.shuffle}<b>${save.boosters.shuffle}</b></span><span class="inv-heart">${ICONS.heart}<b>${save.lives}</b></span>`;
+  $("#shop-list").innerHTML = items.map((p) => {
+    const owned = p.type === "noads" && save.noAds;
+    return `<article class="shop-card ${p.type === "noads" ? "featured" : ""}">
+      ${p.badge && !owned ? `<span class="badge">${p.badge}</span>` : ""}
+      ${SHOP_ART[p.art]()}
+      <div class="shop-text"><h3>${p.title}</h3><p>${p.desc}</p></div>
+      <button class="btn big buy" data-buy="${p.id}" ${owned ? "disabled" : ""}>${owned ? "Acheté ✓" : Store.priceOf(p)}</button>
+    </article>`;
+  }).join("") + (Store.available ? "" : `<p class="muted shop-note">La boutique n'est pas disponible pour le moment.</p>`);
+  $("#shop-list").querySelectorAll("[data-buy]").forEach((b) => (b.onclick = () => purchase(productById(b.dataset.buy))));
+}
+
+/* ---------------------------------------------------------------------- */
+/* Notifications                                                          */
+/* ---------------------------------------------------------------------- */
+function askNotifications() {
+  return new Promise((done) =>
+    modal(`<div class="modal-icon">${ICONS.bell}</div><h2>On te prévient ?</h2>
+      <p>Reçois un petit rappel quand tes <b>vies sont rechargées</b> et quand ton <b>cadeau du jour</b> t'attend. Jamais la nuit, promis.</p>
+      <button class="btn big" data-act="yes">Oui, avec plaisir</button>
+      <button class="btn ghost" data-act="no">Plus tard</button>`, async (act) => {
+      save.notif = act === "yes" ? await Notify.request() : false;
+      persist();
+      done();
+    }));
+}
+function scheduleNotifications() {
+  refreshLives();
+  Notify.schedule({
+    enabled: save.notif === true,
+    livesFullAt: save.lives < MAX_LIVES ? save.livesTs + (MAX_LIVES - save.lives) * LIFE_REGEN_MS : null,
+    giftOpenedToday: save.lastGift === today(),
+  });
+}
 
 /* ====================================================================== */
 /* Démarrage                                                              */
@@ -1425,6 +1552,9 @@ async function boot() {
   };
   $("#home-help").onclick = () => { Sound.tap(); openHelp("home"); };
   $("#home-settings").onclick = () => { Sound.tap(); openSettings(); };
+  $("#home-shop").onclick = () => { Sound.tap(); openShop("home"); };
+  $("#map-shop").onclick = () => { Sound.tap(); openShop("map"); };
+  $("#shop-back").onclick = () => { Sound.tap(); closeShop(); };
   $("#gift-btn").onclick = openGift;
   $("#map-settings").onclick = () => { Sound.tap(); openSettings(); };
   $("#map-back").onclick = () => { Sound.tap(); openHome(); };
@@ -1434,13 +1564,18 @@ async function boot() {
   document.querySelectorAll("[data-booster]").forEach((b) => (b.onclick = () => onBooster(b.dataset.booster)));
   $("#level-list").addEventListener("scroll", onMapScroll, { passive: true });
   addEventListener("resize", layout);
-  document.addEventListener("visibilitychange", () => (document.hidden ? Sound.suspend() : Sound.resume()));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { Sound.suspend(); scheduleNotifications(); }
+    else { Sound.resume(); Notify.cancelAll(); }
+  });
   setInterval(updateLivesUi, 1000);
 
   // Écran de chargement : on attend les polices, avec une durée minimale pour l'animation.
   const t0 = performance.now();
   try { await Promise.race([document.fonts.ready, sleep(2500)]); } catch (e) { /* ok */ }
+  Ads.setRemoveAds(save.noAds);
   Ads.init();
+  Store.init((noAds) => { if (noAds && !save.noAds) { save.noAds = true; persist(); } Ads.setRemoveAds(true); });
   await sleep(Math.max(0, 1600 - (performance.now() - t0)));
   openHome();
 }

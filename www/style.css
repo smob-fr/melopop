@@ -267,7 +267,7 @@ b { font-weight: 700; }
 .loader div { height: 100%; width: 0; background: linear-gradient(90deg, var(--pink), var(--gold)); animation: load 1.5s cubic-bezier(.4, 0, .2, 1) forwards; }
 .home-center { gap: 0; }
 .play-btn { max-width: 280px; font-size: 24px; padding: 16px 26px; animation: breathe 2.4s ease-in-out infinite; }
-.home-row { display: flex; gap: 22px; justify-content: center; margin-top: 26px; }
+.home-row { display: flex; gap: 14px; justify-content: center; margin-top: 26px; }
 .round-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 26px; color: var(--gold); }
 .round-btn > svg { width: 60px; height: 60px; padding: 16px; border-radius: 50%; background: var(--panel); box-shadow: inset 0 0 0 2px var(--panel-rim), 0 4px 0 rgba(0, 0, 0, .3); }
 .round-btn span { font-size: 14px; color: var(--ink-soft); }
@@ -326,6 +326,34 @@ b { font-weight: 700; }
 .ice-demo { position: relative; padding: 2px; border-radius: 9px; background: linear-gradient(160deg, rgba(210, 245, 255, .75), rgba(120, 200, 255, .45)); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7); }
 .ice-demo.thick { box-shadow: inset 0 0 0 3px #fff, 0 0 10px rgba(180, 230, 255, .8); background: linear-gradient(160deg, #eefaff, #9ad6ff); }
 .swap-demo { animation: swapDemo 2s ease-in-out infinite; }
+
+/* ---------- Boutique ---------- */
+.shop-inv { display: flex; justify-content: center; gap: 10px; margin: 12px 0 4px; }
+.shop-inv span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel);
+  box-shadow: inset 0 0 0 2px var(--panel-rim); color: var(--gold); font-size: 18px; }
+.shop-inv span.inv-heart { color: var(--pink); }
+.shop-inv b { color: var(--ink); font-size: 16px; }
+#shop-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 0 24px; max-width: 560px; width: 100%; margin: 0 auto; }
+.shop-card { position: relative; display: grid; grid-template-columns: 74px 1fr; grid-template-areas: "art text" "art buy"; gap: 4px 14px; align-items: center;
+  padding: 16px; border-radius: 22px; background: var(--panel); box-shadow: inset 0 0 0 2px var(--panel-rim); }
+.shop-card.featured { background: linear-gradient(160deg, rgba(255, 95, 162, .35), rgba(60, 20, 100, .8)); box-shadow: inset 0 0 0 3px var(--gold), 0 10px 30px rgba(255, 95, 162, .25); }
+.shop-card .shop-art { grid-area: art; }
+.shop-text { grid-area: text; min-width: 0; }
+.shop-text h3 { margin: 0 0 2px; font-size: 19px; color: var(--gold); }
+.shop-text p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
+.shop-card .buy { grid-area: buy; margin: 8px 0 0; max-width: 170px; padding: 9px 18px; font-size: 18px; justify-self: start; }
+.shop-card .buy:disabled { background: rgba(69, 224, 160, .25); color: var(--mint); box-shadow: inset 0 0 0 2px var(--mint); filter: none; }
+.badge { position: absolute; top: -10px; right: 14px; padding: 3px 10px; border-radius: 999px; background: var(--pink); color: #fff; font-size: 12px; font-weight: 700;
+  letter-spacing: .04em; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.shop-art { width: 74px; height: 74px; border-radius: 20px; display: grid; place-items: center; font-size: 40px; color: var(--gold);
+  background: radial-gradient(circle at 40% 30%, rgba(255, 230, 150, .35), rgba(0, 0, 0, .25)); box-shadow: inset 0 0 0 2px rgba(255, 214, 120, .35); margin: 0 auto; }
+.shop-art.noads { color: #fff; background: radial-gradient(circle at 40% 30%, #ff8cc0, var(--pink) 60%, #a8195a); }
+.shop-art.heart { color: var(--pink); }
+.shop-art.pair { display: flex; gap: 2px; justify-content: center; align-items: center; font-size: 28px; }
+.shop-art.chest-art { font-size: 46px; }
+#modal-box .shop-art { margin: 6px auto 10px; }
+.shop-note { text-align: center; }
+.pay-sheet p { color: #555; }
 
 /* ---------- Fenêtres ---------- */
 #modal { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
