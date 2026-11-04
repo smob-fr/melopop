@@ -3,6 +3,20 @@
   "appName": "Mélo Pop",
   "webDir": "www",
   "backgroundColor": "#2a1846",
-  "android": { "allowMixedContent": false },
-  "ios": { "contentInset": "never" }
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#1b0f2e"
+  },
+  "ios": {
+    "contentInset": "never"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#2a1846",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
 }

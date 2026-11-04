@@ -28,20 +28,20 @@ function ice(pattern, layers = 1, deepPattern = null) {
 
 // Niveaux conçus à la main (1 → 20), puis génération progressive.
 const HAND = [
-  { moves: 20, colors: 4, target: 4000 },
-  { moves: 18, colors: 4, target: 2500, collect: { 0: 15 } },
-  { moves: 20, colors: 5, target: 4500 },
-  { moves: 18, colors: 5, target: 2000, ice: ice("center") },
-  { moves: 20, colors: 5, target: 3000, collect: { 1: 20, 3: 20 } },
+  { moves: 20, colors: 4, target: 3000, tutorial: true },
+  { moves: 18, colors: 4, target: 2500, collect: { 0: 15 }, intro: "collect" },
+  { moves: 20, colors: 5, target: 4500, intro: "bomb" },
+  { moves: 18, colors: 5, target: 2000, ice: ice("center"), intro: "ice" },
+  { moves: 20, colors: 5, target: 3000, collect: { 1: 20, 3: 20 }, intro: "star" },
   { moves: 22, colors: 5, target: 3000, ice: ice("bottom") },
   { moves: 18, colors: 5, target: 6000 },
-  { moves: 22, colors: 5, target: 3500, ice: ice("cross") },
+  { moves: 22, colors: 5, target: 3500, ice: ice("cross"), intro: "combo" },
   { moves: 20, colors: 5, target: 4000, collect: { 2: 25, 4: 25 } },
   { moves: 24, colors: 5, target: 4000, ice: ice("border") },
   { moves: 22, colors: 6, target: 5000 },
   { moves: 22, colors: 6, target: 3500, ice: ice("diag") },
   { moves: 22, colors: 6, target: 4000, collect: { 0: 20, 1: 20, 5: 20 } },
-  { moves: 25, colors: 6, target: 4500, ice: ice("center", 2) },
+  { moves: 25, colors: 6, target: 4500, ice: ice("center", 2), intro: "ice2" },
   { moves: 20, colors: 6, target: 8000 },
   { moves: 25, colors: 6, target: 5000, ice: ice("checker") },
   { moves: 24, colors: 6, target: 5000, collect: { 3: 30, 4: 30 }, ice: ice("bottom") },
@@ -71,6 +71,16 @@ function generate(i) {
 }
 
 export const LEVEL_COUNT = 60;
+
+// Les niveaux sont regroupés en « mondes » de 10, chacun avec son ambiance.
+export const WORLDS = [
+  { name: "Prélude", hue: 285 },
+  { name: "Allegro", hue: 330 },
+  { name: "Andante", hue: 200 },
+  { name: "Scherzo", hue: 30 },
+  { name: "Nocturne", hue: 240 },
+  { name: "Grand Final", hue: 160 },
+];
 
 export function getLevel(index) {
   const def = index < HAND.length ? HAND[index] : generate(index);

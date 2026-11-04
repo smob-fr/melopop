@@ -8,24 +8,49 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Accueil -->
-  <section id="home" class="screen active">
-    <div class="home-inner">
-      <div class="logo"><span>♪</span><span>♫</span><span>♬</span></div>
-      <h1>Mélo<b>Pop</b></h1>
-      <p class="tagline">Aligne les notes, compose ta mélodie !</p>
-      <button id="play" class="btn big">Jouer</button>
-      <button id="home-settings" class="btn ghost">Réglages</button>
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <!-- Chargement -->
+  <section id="loading" class="screen active">
+    <div class="center">
+      <div class="logo-gems">
+        <div class="gem c0"><i>♪&#xFE0E;</i></div><div class="gem c2"><i>♩&#xFE0E;</i></div><div class="gem c4"><i>♭&#xFE0E;</i></div>
+      </div>
+      <h1 class="title"><span>Mélo</span><span class="pop">Pop</span></h1>
+      <div class="loader"><div></div></div>
+      <p class="muted">Accordage des notes…</p>
     </div>
   </section>
 
-  <!-- Carte des niveaux -->
+  <!-- Accueil -->
+  <section id="home" class="screen">
+    <header class="bar">
+      <button class="pill lives-btn" data-icon="heart"><span class="lives">5</span><small class="lives-timer"></small></button>
+      <div class="pill star-pill" data-icon="star"><span class="total-stars">0</span></div>
+    </header>
+    <div class="center home-center">
+      <div class="logo-gems big">
+        <div class="gem c0"><i>♪&#xFE0E;</i></div><div class="gem c2"><i>♩&#xFE0E;</i></div><div class="gem c4"><i>♭&#xFE0E;</i></div>
+        <div class="gem c3"><i>♬&#xFE0E;</i></div><div class="gem c5"><i>♯&#xFE0E;</i></div>
+      </div>
+      <h1 class="title big"><span>Mélo</span><span class="pop">Pop</span></h1>
+      <p class="tagline">Aligne les notes, compose ta mélodie</p>
+      <button id="play" class="btn big play-btn" data-icon="play"><span id="play-label">Commencer</span></button>
+      <div class="home-row">
+        <button id="gift-btn" class="round-btn" data-icon="gift"><span>Cadeau</span></button>
+        <button id="home-help" class="round-btn" data-icon="help"><span>Aide</span></button>
+        <button id="home-settings" class="round-btn" data-icon="gear"><span>Réglages</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Carte -->
   <section id="map" class="screen">
     <header class="bar">
-      <button id="map-back" class="icon-btn" aria-label="Retour">‹</button>
-      <button id="lives-btn" class="pill">❤︎ <span class="lives">5</span> <small id="lives-timer"></small></button>
-      <div class="pill">★ <span id="total-stars">0</span></div>
-      <button id="map-settings" class="icon-btn" aria-label="Réglages">⚙︎</button>
+      <button id="map-back" class="icon-btn" data-icon="back" aria-label="Accueil"></button>
+      <button class="pill lives-btn" data-icon="heart"><span class="lives">5</span><small class="lives-timer"></small></button>
+      <div class="pill star-pill" data-icon="star"><span class="total-stars">0</span></div>
+      <button id="map-settings" class="icon-btn" data-icon="gear" aria-label="Réglages"></button>
     </header>
     <div id="level-list"></div>
   </section>
@@ -33,18 +58,43 @@
   <!-- Partie -->
   <section id="game" class="screen">
     <header class="hud">
-      <button id="pause" class="icon-btn" aria-label="Pause">❚❚</button>
-      <div class="hud-block"><small id="level-title">Niveau</small><div class="moves-wrap"><b id="moves">0</b><small>coups</small></div></div>
-      <div id="goals"></div>
+      <button id="pause" class="icon-btn" data-icon="pause" aria-label="Pause"></button>
+      <div id="moves-badge" class="moves-badge"><b id="moves">0</b><small>coups</small></div>
+      <div class="goals-wrap"><small id="level-title">Niveau</small><div id="goals"></div></div>
     </header>
     <div class="scorebar">
       <div class="progress"><div id="progress-fill"></div>
-        <i style="left:45.5%">★</i><i style="left:68.2%">★</i><i style="left:98%">★</i></div>
+        <i style="left:45.5%" data-icon="star"></i><i style="left:68.2%" data-icon="star"></i><i style="left:97%" data-icon="star"></i></div>
       <b id="score">0</b>
     </div>
-    <div class="board-wrap"><div id="board"></div><div id="cheer"></div></div>
+    <div class="board-wrap">
+      <div class="board-frame"><div id="board"></div></div>
+      <div id="cheer"></div>
+    </div>
+    <footer class="boosters">
+      <button class="booster" data-booster="hammer" data-icon="hammer" aria-label="Marteau"><span class="count">3</span><small>Marteau</small></button>
+      <button class="booster" data-booster="shuffle" data-icon="shuffle" aria-label="Mélange"><span class="count">2</span><small>Mélange</small></button>
+    </footer>
   </section>
 
+  <!-- Comment jouer -->
+  <section id="help" class="screen">
+    <header class="bar">
+      <button id="help-back" class="icon-btn" data-icon="back" aria-label="Retour"></button>
+      <h2 class="bar-title">Comment jouer</h2>
+      <span class="icon-btn ghost-spacer"></span>
+    </header>
+    <div id="help-list"></div>
+  </section>
+
+  <!-- Tutoriel -->
+  <div id="tut" hidden>
+    <div id="tut-spot" hidden></div>
+    <div id="tut-hand" hidden><span class="finger"></span></div>
+    <div id="tut-bubble" hidden></div>
+  </div>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
   <div id="modal"><div id="modal-box"></div></div>
   <div id="fake-banner">Bannière publicitaire (simulation)</div>
 
