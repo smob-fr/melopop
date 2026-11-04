@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#2a1846">
+  <title>Mélo Pop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Accueil -->
+  <section id="home" class="screen active">
+    <div class="home-inner">
+      <div class="logo"><span>♪</span><span>♫</span><span>♬</span></div>
+      <h1>Mélo<b>Pop</b></h1>
+      <p class="tagline">Aligne les notes, compose ta mélodie !</p>
+      <button id="play" class="btn big">Jouer</button>
+      <button id="home-settings" class="btn ghost">Réglages</button>
+    </div>
+  </section>
+
+  <!-- Carte des niveaux -->
+  <section id="map" class="screen">
+    <header class="bar">
+      <button id="map-back" class="icon-btn" aria-label="Retour">‹</button>
+      <button id="lives-btn" class="pill">❤︎ <span class="lives">5</span> <small id="lives-timer"></small></button>
+      <div class="pill">★ <span id="total-stars">0</span></div>
+      <button id="map-settings" class="icon-btn" aria-label="Réglages">⚙︎</button>
+    </header>
+    <div id="level-list"></div>
+  </section>
+
+  <!-- Partie -->
+  <section id="game" class="screen">
+    <header class="hud">
+      <button id="pause" class="icon-btn" aria-label="Pause">❚❚</button>
+      <div class="hud-block"><small id="level-title">Niveau</small><div class="moves-wrap"><b id="moves">0</b><small>coups</small></div></div>
+      <div id="goals"></div>
+    </header>
+    <div class="scorebar">
+      <div class="progress"><div id="progress-fill"></div>
+        <i style="left:45.5%">★</i><i style="left:68.2%">★</i><i style="left:98%">★</i></div>
+      <b id="score">0</b>
+    </div>
+    <div class="board-wrap"><div id="board"></div><div id="cheer"></div></div>
+  </section>
+
+  <div id="modal"><div id="modal-box"></div></div>
+  <div id="fake-banner">Bannière publicitaire (simulation)</div>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>

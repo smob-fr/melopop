@@ -1,0 +1,8 @@
+{
+  "appId": "fr.smob.melopop",
+  "appName": "Mélo Pop",
+  "webDir": "www",
+  "backgroundColor": "#2a1846",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "never" }
+}
