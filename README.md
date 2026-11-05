@@ -64,6 +64,11 @@ Après le niveau 2, le jeu propose au joueur de recevoir des rappels, avec une e
 
 Aucun rappel n'est envoyé entre 21 h et 9 h. Ils sont annulés dès que le joueur revient dans le jeu. Les autorisations Android nécessaires sont ajoutées automatiquement par le module.
 
+## Version en ligne
+
+Le jeu est jouable dans un navigateur sur **https://smob-fr.github.io/melopop/** (GitHub Pages, branche `main`).
+Sur téléphone, « Ajouter à l'écran d'accueil » l'installe comme une appli. Dans cette version, les pubs et les achats sont simulés.
+
 ## Essayer tout de suite (navigateur)
 
 ```bash
