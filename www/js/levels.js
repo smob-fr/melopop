@@ -30,11 +30,11 @@ function ice(pattern, layers = 1, deepPattern = null) {
 const HAND = [
   { moves: 20, colors: 4, target: 3000, tutorial: true },
   { moves: 18, colors: 4, target: 2500, collect: { 0: 15 }, intro: "collect" },
-  { moves: 20, colors: 5, target: 4500, intro: "bomb" },
+  { moves: 20, colors: 5, target: 4500, boosterTuto: true },
   { moves: 18, colors: 5, target: 2000, ice: ice("center"), intro: "ice" },
   { moves: 20, colors: 5, target: 3000, collect: { 1: 20, 3: 20 }, intro: "star" },
   { moves: 22, colors: 5, target: 3000, ice: ice("bottom") },
-  { moves: 18, colors: 5, target: 6000 },
+  { moves: 18, colors: 5, target: 6000, intro: "bomb" },
   { moves: 22, colors: 5, target: 3500, ice: ice("cross"), intro: "combo" },
   { moves: 20, colors: 5, target: 4000, collect: { 2: 25, 4: 25 } },
   { moves: 24, colors: 5, target: 4000, ice: ice("border") },

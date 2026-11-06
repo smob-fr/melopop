@@ -23,5 +23,8 @@ export const ICONS = {
   bell: svg('<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21h4"/>'),
   noads: svg('<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M8.5 15l1.8-6h.4l1.8 6M9 13.2h2.8M14.5 9h1.6a2.2 2.2 0 0 1 0 6h-1.6z"/><path d="M3.5 3.5l17 17" stroke-width="2.6"/>'),
   chest: svg('<path d="M3.5 10.5h17v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z" fill="currentColor" fill-opacity=".25"/><path d="M3.5 10.5V8a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4v2.5z"/><rect x="10" y="9" width="4" height="4.5" rx="1" fill="currentColor"/><path d="M3.5 10.5h17"/>'),
+  bomb: svg('<circle cx="10.5" cy="14" r="7" fill="currentColor" fill-opacity=".3"/><path d="M15.5 9l2.5-2.5"/><path d="M18 4.5v-1M20.5 6.5h1M19.8 4.7l.8-.8"/><circle cx="8" cy="11.5" r="1.3" fill="currentColor"/>'),
+  wand: svg('<path d="M4 20L15 9" stroke-width="2.8"/><path fill="currentColor" stroke="none" d="M17 2.5l1.2 2.6 2.8.4-2 2 .5 2.8L17 9l-2.5 1.3.5-2.8-2-2 2.8-.4z"/><path d="M20.5 13v2M19.5 14h2M7 4v2M6 5h2"/>'),
+  clock: svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/>'),
   map: svg('<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>'),
 };

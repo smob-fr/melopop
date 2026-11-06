@@ -10,7 +10,8 @@ aligner au moins 3 notes de la même couleur.
 - **Fiches « Nouveau ! »** qui présentent chaque mécanique la première fois qu'elle apparaît (récolte, bombe, givre, étoile, combinaisons, givre épais), et une page **Comment jouer** illustrée.
 - **60 niveaux** avec 3 types d'objectifs : score, récolte de notes, cases givrées (1 ou 2 couches).
 - **Tuiles spéciales** : 4 alignées → note rayée (efface une rangée ou une colonne) ; L ou T → bombe (carré 3×3) ; 5 alignées → étoile (efface une couleur). Combinaisons entre spéciales.
-- **Bonus** : marteau (casse une note) et mélange, sans coût de coup. **Cadeau du jour** à ouvrir sur l'accueil.
+- **5 bonus**, sans coût de coup : marteau (casse une note), bombe (à poser où l'on veut), étoile (efface toute une couleur), mélange, +3 coups. Un **tutoriel des bonus** au niveau 3 les présente un par un, avec un essai guidé.
+- **Gagner des bonus** : cadeau du jour, 3 étoiles sur un niveau (+1 bonus), coffre tous les 5 niveaux (+2 bonus), vidéo récompensée, ou lots dans la boutique.
 - Étoiles (1 à 3), **5 vies** qui se rechargent (1 toutes les 20 min), records.
 - Graphismes : notes en relief, particules, rayons, explosions, secousses, confettis, décor animé (portée qui ondule, notes qui flottent).
 - **Musique d'ambiance** et effets sonores générés en direct (aucun fichier audio), **vibrations**. Chaque réglage peut être coupé.
@@ -37,9 +38,9 @@ La **boutique** est accessible depuis l'accueil, la carte, et quand le joueur n'
 | Identifiant produit | Type à créer dans les stores | Prix conseillé | Contenu |
 |---|---|---|---|
 | `melopop_noads` | **non consommable** | 3,99 € | supprime bannières et interstitielles (les vidéos bonus restent) |
-| `melopop_starter` | consommable | 1,99 € | 5 marteaux, 5 mélanges, vies pleines (proposé une seule fois) |
-| `melopop_pack_s` | consommable | 0,99 € | 3 marteaux, 3 mélanges |
-| `melopop_pack_l` | consommable | 4,99 € | 15 marteaux, 15 mélanges, vies pleines |
+| `melopop_starter` | consommable | 1,99 € | 3 bonus de chaque sorte, vies pleines (proposé une seule fois) |
+| `melopop_pack_s` | consommable | 0,99 € | 2 marteaux, 2 bombes, 1 étoile, 1 mélange |
+| `melopop_pack_l` | consommable | 4,99 € | 10 bonus de chaque sorte (50), vies pleines |
 | `melopop_lives` | consommable | 0,99 € | toutes les vies |
 
 Mise en place :

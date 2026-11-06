@@ -30,14 +30,16 @@ const today = () => new Date().toISOString().slice(0, 10);
 const SAVE_KEY = "melopop.v1";
 const DEFAULT_SAVE = () => ({
   unlocked: 1, stars: {}, best: {}, lives: MAX_LIVES, livesTs: Date.now(),
-  sound: true, music: true, haptics: true, boosters: { hammer: 3, shuffle: 2 },
+  sound: true, music: true, haptics: true, boosters: { hammer: 3, bomb: 2, star: 1, shuffle: 2, moves: 1 },
+  boosterTutoDone: false, boosterSeen: {},
   lastGift: "", tutorialDone: false, intros: {},
   noAds: false, bought: {}, notif: null, // notif : null = pas encore proposé
 });
 const save = (() => {
   const d = DEFAULT_SAVE();
   try { Object.assign(d, JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch (e) { /* vide */ }
-  d.boosters = { hammer: 3, shuffle: 2, ...d.boosters };
+  d.boosters = { hammer: 3, bomb: 2, star: 1, shuffle: 2, moves: 1, ...d.boosters };
+  d.boosterSeen = d.boosterSeen || {};
   d.intros = d.intros || {};
   d.bought = d.bought || {};
   return d;
@@ -457,7 +459,7 @@ function clearHint() {
 }
 function scheduleHint() {
   clearHint();
-  if (ended || tut) return;
+  if (ended || tut || btut) return;
   hintTimer = setTimeout(() => {
     if (busy || ended || tut) return;
     const m = findMove();
@@ -473,6 +475,7 @@ async function trySwap(a, b) {
   const ta = grid[a[0]][a[1]], tb = grid[b[0]][b[1]];
   if (!ta || !tb) return;
   if (tut && !tut.accepts(a, b)) { flash(ta, "nope", 400); Sound.bad(); return; }
+  if (btut) { flash(ta, "nope", 400); return; }
   busy = true;
   clearHint();
   Sound.swap();
@@ -552,36 +555,83 @@ async function specialCombo(ta, tb, at) {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Bonus : marteau et mélange                                             */
+/* Bonus                                                                  */
 /* ---------------------------------------------------------------------- */
-async function useHammer(r, c) {
+// target : le bonus s'utilise en touchant une case du plateau après l'avoir choisi.
+const BOOSTERS = {
+  hammer:  { name: "Marteau", icon: "hammer", target: true, aim: "Touche la note à casser",
+             desc: "Casse <b>la note de ton choix</b>. Parfait pour débloquer un coin difficile." },
+  bomb:    { name: "Bombe", icon: "bomb", target: true, aim: "Touche la case où poser la bombe",
+             desc: "Pose une <b>bombe où tu veux</b> : elle fait exploser les 9 notes autour d'elle." },
+  star:    { name: "Étoile", icon: "wand", target: true, aim: "Touche une note : toute sa couleur disparaît",
+             desc: "Touche une note : <b>toutes les notes de sa couleur</b> disparaissent du plateau." },
+  shuffle: { name: "Mélange", icon: "shuffle", target: false,
+             desc: "<b>Redistribue toutes les notes</b> quand tu ne vois plus de bon coup." },
+  moves:   { name: "+3 coups", icon: "clock", target: false,
+             desc: "Ajoute <b>3 coups</b> au niveau en cours. Idéal quand tu es tout près du but." },
+};
+const BOOSTER_KEYS = Object.keys(BOOSTERS);
+let btut = null; // tutoriel des bonus en cours
+
+async function useTargeted(kind, r, c) {
   booster = null;
+  save.boosters[kind]--; persist();
   updateBoosters();
-  save.boosters.hammer--; persist(); updateBoosters();
   busy = true;
   clearHint();
   const t = grid[r][c];
-  if (t) flash(t, "smash", 300);
-  await sleep(200);
-  Sound.boom(); shake();
+  const set = new Set();
   combo = 1;
-  await clearCells(new Set([key(r, c)]));
+  if (kind === "hammer") {
+    if (t) flash(t, "smash", 300);
+    await sleep(220);
+    Sound.boom(); shake();
+    set.add(key(r, c));
+  } else if (kind === "bomb") {
+    if (t) { t.special = "bomb"; renderTile(t); flash(t, "born", 500); }
+    Sound.star();
+    await sleep(550);
+    const out = []; area(r, c, 1, out);
+    out.forEach(([rr, cc]) => set.add(key(rr, cc)));
+    if (t) t.triggered = true;
+    blast(r, c, 1); Sound.boom(); shake();
+  } else if (kind === "star") {
+    const col = t && t.color !== RAINBOW ? t.color : mostCommonColor();
+    Sound.special();
+    forEachTile((u, rr, cc) => {
+      if (u.color !== col) return;
+      u.el.classList.add("glow");
+      zap(r, c, rr, cc, col);
+      set.add(key(rr, cc));
+    });
+    await sleep(450);
+  }
+  await clearCells(set);
   await gravity();
   await cascade(null);
   busy = false;
+  if (btut) btut.signal("used");
   checkEnd();
   scheduleHint();
 }
 
+function boosterCard(kind, { first = false } = {}) {
+  const b = BOOSTERS[kind];
+  return `<div class="modal-icon booster-icon">${ICONS[b.icon]}</div><h2>${b.name}</h2><p>${b.desc}</p>
+    ${first ? `<p class="muted">Les bonus ne coûtent <b>aucun coup</b>.</p>` : ""}`;
+}
+
 async function onBooster(kind) {
   if (busy || ended || tut) return;
+  if (btut && btut.allowed !== kind) return;
   Sound.tap();
+  const b = BOOSTERS[kind];
+  if (booster === kind) { booster = null; updateBoosters(); return; } // second appui : annule
   if (save.boosters[kind] <= 0) {
-    const label = kind === "hammer" ? "Marteau" : "Mélange";
-    modal(`<div class="modal-icon">${ICONS[kind]}</div><h2>${label}</h2>
-      <p>Tu n'en as plus. Regarde une courte vidéo pour en obtenir un.</p>
-      <button class="btn big reward" data-act="reward">${ICONS.video} Obtenir 1 ${label.toLowerCase()}</button>
-      <button class="btn" data-act="shop">${ICONS.cart} Voir la boutique</button>
+    modal(`${boosterCard(kind)}
+      <p>Tu n'en as plus. Regarde une courte vidéo pour en obtenir un, ou choisis un lot dans la boutique.</p>
+      <button class="btn big reward" data-act="reward">${ICONS.video} Obtenir 1 ${b.name.toLowerCase()}</button>
+      <button class="btn" data-act="shop">${ICONS.cart} Voir les lots de bonus</button>
       <button class="btn ghost" data-act="close">Non merci</button>`, async (act) => {
       if (act === "reward" && (await Ads.rewarded())) {
         save.boosters[kind]++; persist(); updateBoosters();
@@ -591,28 +641,122 @@ async function onBooster(kind) {
     });
     return;
   }
-  if (kind === "hammer") {
-    booster = booster === "hammer" ? null : "hammer";
+  // Première utilisation : on explique le bonus avant de l'utiliser.
+  if (!save.boosterSeen[kind] && !btut) {
+    const go = await new Promise((done) => modal(`${boosterCard(kind, { first: true })}
+      <button class="btn big" data-act="use">Utiliser</button><button class="btn ghost" data-act="close">Plus tard</button>`,
+      (act) => done(act === "use")));
+    save.boosterSeen[kind] = true; persist();
+    if (!go) return;
+  }
+  if (b.target) {
+    booster = kind;
     updateBoosters();
-    if (booster) banner("Touche une note à casser", "small");
-  } else {
-    save.boosters.shuffle--; persist(); updateBoosters();
+    if (btut) btut.signal("armed");
+    return;
+  }
+  save.boosters[kind]--; persist(); updateBoosters();
+  if (kind === "shuffle") {
     busy = true;
     await shuffle(true);
     busy = false;
-    scheduleHint();
+  } else if (kind === "moves") {
+    moves += 3;
+    updateHud();
+    banner("+3 coups !");
+    Sound.gift();
+    const m = $("#moves-badge");
+    m.classList.remove("flash"); void m.offsetWidth; m.classList.add("flash");
   }
+  if (btut) btut.signal("used");
+  scheduleHint();
 }
 function updateBoosters() {
-  for (const k of ["hammer", "shuffle"]) {
-    const b = document.querySelector(`[data-booster="${k}"]`);
-    if (!b) continue;
-    const n = save.boosters[k];
-    b.querySelector(".count").textContent = n > 0 ? n : "+";
-    b.classList.toggle("empty", n <= 0);
-    b.classList.toggle("armed", booster === k);
+  for (const k of BOOSTER_KEYS) {
+    const el = document.querySelector(`[data-booster="${k}"]`);
+    if (!el) continue;
+    const n = save.boosters[k] || 0;
+    el.querySelector(".count").textContent = n > 0 ? n : "+";
+    el.classList.toggle("empty", n <= 0);
+    el.classList.toggle("armed", booster === k);
   }
-  boardEl().classList.toggle("aim", booster === "hammer");
+  boardEl().classList.toggle("aim", !!booster);
+  const hint = $("#aim-hint");
+  if (booster) {
+    hint.innerHTML = `<span class="aim-icon">${ICONS[BOOSTERS[booster].icon]}</span><span>${BOOSTERS[booster].aim}</span>
+      <button id="aim-cancel" aria-label="Annuler">${ICONS.close}</button>`;
+    hint.hidden = false;
+    $("#aim-cancel").onclick = () => { Sound.tap(); booster = null; updateBoosters(); };
+  } else hint.hidden = true;
+}
+
+/** Bonus gagnés en jouant : 3 étoiles pour la première fois, et un coffre tous les 5 niveaux. */
+function levelRewards(prevStars, stars) {
+  const gains = [];
+  const give = (n) => {
+    for (let k = 0; k < n; k++) {
+      const kind = BOOSTER_KEYS[Math.floor(Math.random() * BOOSTER_KEYS.length)];
+      save.boosters[kind]++;
+      gains.push(kind);
+    }
+  };
+  if (stars === 3 && prevStars < 3) give(1);
+  if (level.number % 5 === 0 && prevStars === 0) give(2);
+  persist();
+  return gains;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Tutoriel des bonus (niveau 3)                                          */
+/* ---------------------------------------------------------------------- */
+async function runBoosterTutorial() {
+  const layer = tutLayer();
+  layer.hidden = false;
+  let waiter = null;
+  btut = {
+    allowed: null,
+    signal(ev) { if (waiter && waiter.ev === ev) { const w = waiter; waiter = null; w.res(); } },
+  };
+  const waitFor = (ev) => new Promise((res) => (waiter = { ev, res }));
+  const bar = $(".boosters").getBoundingClientRect();
+  spotlight(bar);
+  await bubble(`Voici tes <b>bonus</b> ! Ils t'aident quand tu es coincé, et ils ne coûtent <b>aucun coup</b>.<br>Découvrons-les un par un.`,
+    { near: bar, button: "Suite" });
+  for (const k of BOOSTER_KEYS) {
+    const el = document.querySelector(`[data-booster="${k}"]`);
+    const r = el.getBoundingClientRect();
+    spotlight(r);
+    el.classList.add("tut-focus");
+    await bubble(`<span class="tut-bicon">${ICONS[BOOSTERS[k].icon]}</span><b>${BOOSTERS[k].name}</b><br>${BOOSTERS[k].desc}`, { near: r, button: "Suite" });
+    el.classList.remove("tut-focus");
+    save.boosterSeen[k] = true;
+  }
+  // Essai guidé avec la bombe (offerte).
+  save.boosters.bomb++; persist(); updateBoosters();
+  const bomb = document.querySelector('[data-booster="bomb"]');
+  const br = bomb.getBoundingClientRect();
+  spotlight(br);
+  btut.allowed = "bomb";
+  bubble(`On t'offre une <b>bombe</b> pour essayer.<br>Touche le bouton <b>Bombe</b>.`, { near: br });
+  await waitFor("armed");
+  const board = $(".board-frame").getBoundingClientRect();
+  spotlight(board);
+  bubble(`Maintenant, touche <b>n'importe quelle case</b> du plateau pour y poser la bombe.`, { near: { top: board.top, height: 0 } });
+  await waitFor("used");
+  btut.allowed = null;
+  spotlight(null);
+  await bubble(`Boum ! 💥<br><b>Comment gagner des bonus ?</b><ul class="tut-list">
+    <li><span class="tut-ico">${ICONS.gift}</span><span>le <b>cadeau du jour</b>, sur l'accueil ;</span></li>
+    <li><span class="tut-ico">${ICONS.star}</span><span>finir un niveau avec <b>3 étoiles</b> ;</span></li>
+    <li><span class="tut-ico">${ICONS.chest}</span><span>un <b>coffre tous les 5 niveaux</b> ;</span></li>
+    <li><span class="tut-ico">${ICONS.cart}</span><span>des <b>lots de bonus</b> dans la boutique.</span></li></ul>`, { button: "Jouer" });
+  layer.hidden = true;
+  $("#tut-bubble").hidden = true;
+  btut = null;
+  save.boosterTutoDone = true;
+  persist();
+  checkEnd();
+  scheduleHint();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -637,7 +781,7 @@ function bindInput() {
     if (busy || ended) return;
     const p = cellFromEvent(e);
     if (!p) return;
-    if (booster === "hammer") { useHammer(p[0], p[1]); return; }
+    if (booster) { useTargeted(booster, p[0], p[1]); return; }
     drag = { p, x: e.clientX, y: e.clientY, done: false };
     try { b.setPointerCapture(e.pointerId); } catch (err) { /* ok */ }
   });
@@ -1013,6 +1157,7 @@ async function startLevel(index, { replayTutorial = false } = {}) {
   level = getLevel(index);
   score = 0; shownScore = 0; moves = level.moves; collected = {}; ended = false; busy = true; extraMovesUsed = false;
   booster = null;
+  btut = null;
   FX.setHue(worldOf(index).hue);
   await showScreen("game");
   Ads.hideBanner();
@@ -1071,6 +1216,7 @@ async function startLevel(index, { replayTutorial = false } = {}) {
     await introCard(level.intro);
     save.intros[level.intro] = true; persist();
   }
+  if (level.boosterTuto && !save.boosterTutoDone) { runBoosterTutorial(); return; }
   scheduleHint();
 }
 
@@ -1115,7 +1261,7 @@ function introCard(id) {
 }
 
 async function checkEnd() {
-  if (ended || tut) return;
+  if (ended || tut || btut) return;
   const won = hasSideGoals() ? goalsDone() : score >= level.target;
   if ((hasSideGoals() && won) || moves <= 0) {
     ended = true;
@@ -1161,16 +1307,21 @@ function onWin() {
   const i = level.number - 1;
   const stars = Math.max(1, starsFor(score));
   const prevBest = save.best[i] || 0;
+  const prevStars = save.stars[i] || 0;
   const isRecord = prevBest > 0 && score > prevBest;
   save.stars[i] = Math.max(save.stars[i] || 0, stars);
   save.best[i] = Math.max(save.best[i] || 0, score);
   save.unlocked = Math.max(save.unlocked, Math.min(LEVEL_COUNT, level.number + 1));
   persist();
+  const gains = levelRewards(prevStars, stars);
+  const gainHtml = gains.length ? `<div class="reward-box"><small class="eyebrow">${level.number % 5 === 0 && prevStars === 0 ? "Coffre de palier" : "Bonus gagné"}</small>
+    <div class="reward-items">${gains.map((k) => `<span>${ICONS[BOOSTERS[k].icon]}<b>+1</b><small>${BOOSTERS[k].name}</small></span>`).join("")}</div></div>` : "";
   FX.confetti();
   modal(`<small class="eyebrow">Niveau ${level.number}</small><h2>Bravo !</h2>
     <div class="stars">${[1, 2, 3].map((n) => `<span class="star" data-n="${n}">${ICONS.star}</span>`).join("")}</div>
     <p class="final-score" id="final-score">0</p>
     ${isRecord ? `<p class="record">Nouveau record !</p>` : ""}
+    ${gainHtml}
     <div class="row">
       <button class="btn ghost" data-act="map">${ICONS.map} Carte</button>
       ${level.number < LEVEL_COUNT ? `<button class="btn big" data-act="next">Suivant ${ICONS.play}</button>` : ""}
@@ -1202,9 +1353,16 @@ function onOutOfMoves() {
   const reason = hasSideGoals() ? "Plus de coups !" : "Il manque des points…";
   modal(`<h2>${reason}</h2>
     <div class="goals-card">${goalChips(level, true)}</div>
+    ${save.boosters.moves > 0 ? `<button class="btn big" data-act="usemoves">${ICONS.clock} Utiliser un bonus +3 coups (${save.boosters.moves})</button>` : ""}
     ${!extraMovesUsed ? `<p>Regarde une courte vidéo pour obtenir <b>5 coups de plus</b>.</p>
       <button class="btn big reward" data-act="reward">${ICONS.video} +5 coups</button>` : ""}
     <button class="btn ghost" data-act="giveup">Abandonner</button>`, async (act) => {
+    if (act === "usemoves") {
+      save.boosters.moves--; persist(); updateBoosters();
+      moves += 3; ended = false; updateHud(); scheduleHint();
+      banner("+3 coups !");
+      return;
+    }
     if (act === "reward") {
       const ok = await Ads.rewarded();
       if (ok) {
@@ -1493,15 +1651,14 @@ const productById = (id) => PRODUCTS.find((p) => p.id === id);
 const SHOP_ART = {
   noads: () => `<div class="shop-art noads">${ICONS.noads}</div>`,
   starter: () => `<div class="shop-art">${ICONS.gift}</div>`,
-  small: () => `<div class="shop-art pair">${ICONS.hammer}${ICONS.shuffle}</div>`,
+  small: () => `<div class="shop-art pair">${ICONS.hammer}${ICONS.bomb}</div>`,
   big: () => `<div class="shop-art chest-art">${ICONS.chest}</div>`,
   lives: () => `<div class="shop-art heart">${ICONS.heart}</div>`,
 };
 
 function grantProduct(p) {
   const g = p.grant || {};
-  if (g.hammer) save.boosters.hammer += g.hammer;
-  if (g.shuffle) save.boosters.shuffle += g.shuffle;
+  for (const k of BOOSTER_KEYS) if (g[k]) save.boosters[k] = (save.boosters[k] || 0) + g[k];
   if (g.lives === "full") { save.lives = Math.max(save.lives, MAX_LIVES); save.livesTs = Date.now(); }
   if (p.type === "noads") { save.noAds = true; Ads.setRemoveAds(true); }
   if (p.type === "once") save.bought[p.id] = true;
@@ -1550,7 +1707,8 @@ function closeShop() {
 }
 function renderShop() {
   const items = PRODUCTS.filter((p) => !(p.type === "once" && save.bought[p.id]));
-  $("#shop-inv").innerHTML = `<span>${ICONS.hammer}<b>${save.boosters.hammer}</b></span><span>${ICONS.shuffle}<b>${save.boosters.shuffle}</b></span><span class="inv-heart">${ICONS.heart}<b>${save.lives}</b></span>`;
+  $("#shop-inv").innerHTML = BOOSTER_KEYS.map((k) => `<span title="${BOOSTERS[k].name}">${ICONS[BOOSTERS[k].icon]}<b>${save.boosters[k] || 0}</b></span>`).join("")
+    + `<span class="inv-heart">${ICONS.heart}<b>${save.lives}</b></span>`;
   $("#shop-list").innerHTML = items.map((p) => {
     const owned = p.type === "noads" && save.noAds;
     return `<article class="shop-card ${p.type === "noads" ? "featured" : ""}">
@@ -1603,7 +1761,8 @@ function renderHelp() {
     [`<div class="demo"><span class="mini">${gemHtml(2)}</span><b>12</b></div>`, "Objectifs", "Chaque niveau a un objectif : un score, des notes à récolter ou du givre à faire fondre, avec un nombre de coups limité."],
     [`<div class="demo icon-demo">${ICONS.star}${ICONS.star}${ICONS.star}</div>`, "Étoiles", "Plus ton score est élevé, plus tu gagnes d'étoiles (jusqu'à 3). Les coups restants rapportent des points bonus."],
     [`<div class="demo icon-demo heart">${ICONS.heart}</div>`, "Vies", "Un niveau perdu coûte une vie. Elles se rechargent toutes seules : une vie toutes les 20 minutes, jusqu'à 5."],
-    [`<div class="demo icon-demo">${ICONS.hammer}${ICONS.shuffle}</div>`, "Bonus", "Le marteau casse la note de ton choix, le mélange redistribue le plateau. Aucun des deux ne coûte de coup."],
+    [`<div class="demo icon-demo small-icons">${ICONS.hammer}${ICONS.bomb}${ICONS.wand}</div>`, "Bonus", "Marteau : casse une note. Bombe : pose une bombe où tu veux. Étoile : efface toute une couleur. Mélange : redistribue le plateau. +3 coups : prolonge le niveau. Aucun bonus ne coûte de coup."],
+    [`<div class="demo icon-demo">${ICONS.gift}${ICONS.cart}</div>`, "Gagner des bonus", "Ouvre le cadeau du jour, finis des niveaux avec 3 étoiles, et gagne un coffre tous les 5 niveaux. Des lots de bonus sont aussi en vente dans la boutique."],
   ];
   $("#help-list").innerHTML = rows.map(([art, t, p]) => `<article class="help-card"><div class="help-art">${art}</div><div><h3>${t}</h3><p>${p}</p></div></article>`).join("");
 }
