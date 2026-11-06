@@ -766,15 +766,35 @@ function bubble(html, { near, button } = {}) {
   return new Promise((res) => { $("#tut-ok").onclick = () => { Sound.tap(); res(); }; });
 }
 
+/** Entoure l'alignement que le coup va former, et fait briller les notes déjà en place. */
+function showRun(run, partners) {
+  const el = $("#tut-run");
+  document.querySelectorAll(".tile.tut-partner").forEach((e) => e.classList.remove("tut-partner"));
+  if (!run) { el.hidden = true; return; }
+  const r = cellsRect(run);
+  Object.assign(el.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
+  el.querySelector("b").textContent = run.length;
+  el.hidden = false;
+  el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
+  for (const [rr, cc] of partners) grid[rr][cc] && grid[rr][cc].el.classList.add("tut-partner");
+}
+const g = (c, sp) => `<span class="tut-gem">${gemHtml(c, sp)}</span>`;
+
 async function runTutorial() {
   const layer = tutLayer();
   layer.hidden = false;
   const steps = [
-    { move: [[5, 2], [6, 2]], text: "Fais glisser cette note vers le bas pour aligner <b>3 notes identiques</b>." },
-    { info: "hud" },
-    { move: [[2, 6], [3, 6]], text: "Aligne <b>4 notes</b> d'un coup pour créer une note spéciale." },
+    { info: "goal" },
+    { info: "moves" },
+    { move: [[5, 2], [6, 2]], run: [[6, 0], [6, 1], [6, 2]], partners: [[6, 0], [6, 1]],
+      text: `Ces deux ${g(0)} se suivent : il leur manque une troisième.<br>
+        Fais glisser la ${g(0)} du dessus <b>vers le bas</b> : avec <b>3 notes identiques alignées</b>, elles disparaissent et rapportent des points !` },
+    { info: "score" },
+    { move: [[2, 6], [3, 6]], run: [[3, 4], [3, 5], [3, 6], [3, 7]], partners: [[3, 4], [3, 5], [3, 7]],
+      text: `Ici, il y a un trou entre les ${g(2)}.<br>Glisse la ${g(2)} du dessus <b>dans le trou</b> : <b>4 notes alignées</b> créent une note spéciale !` },
     { info: "line" },
-    { move: [[5, 5], [5, 6]], text: "Aligne la note rayée avec deux notes de sa couleur pour la déclencher." },
+    { move: [[5, 5], [5, 6]], run: [[3, 6], [4, 6], [5, 6]], partners: [[3, 6], [4, 6]],
+      text: `Pour déclencher la note rayée, aligne-la avec deux ${g(2)}.<br>Glisse la ${g(2)} <b>vers la droite</b> pour compléter la colonne.` },
     { info: "end" },
   ];
   let resolveMove = null;
@@ -791,26 +811,44 @@ async function runTutorial() {
   for (const st of steps) {
     if (st.move) {
       tut.allowed = st.move;
-      const rect = cellsRect(st.move);
+      const rect = cellsRect([...st.run, ...st.move]);
       spotlight(rect);
+      showRun(st.run, st.partners);
       showHand(...st.move);
       bubble(st.text, { near: rect });
       await new Promise((r) => (resolveMove = r));
       tut.allowed = null;
       showHand(null);
-    } else if (st.info === "hud") {
-      const rect = $(".hud").getBoundingClientRect();
+      showRun(null);
+    } else if (st.info === "goal") {
+      const rect = $(".goals-wrap").getBoundingClientRect();
       spotlight(rect);
-      await bubble("Bravo ! Chaque alignement rapporte des points.<br>Atteins l'<b>objectif</b> avant d'avoir utilisé tous tes <b>coups</b>.", { near: rect, button: "Compris" });
+      await bubble(`Bienvenue dans Mélo Pop !<br>Ton <b>objectif</b> est toujours affiché ici, en haut.<br>
+        Pour ce premier niveau : <b>marque ${fmt(level.target)} points</b>.`, { near: rect, button: "Suite" });
+    } else if (st.info === "moves") {
+      const rect = $("#moves-badge").getBoundingClientRect();
+      spotlight(rect, true);
+      await bubble(`Tu as <b>${level.moves} coups</b> pour y arriver.<br>Chaque échange de notes utilise 1 coup.<br>
+        <b>Pas de chrono</b> : prends tout ton temps pour réfléchir !`, { near: rect, button: "Suite" });
+    } else if (st.info === "score") {
+      const rect = $(".scorebar").getBoundingClientRect();
+      spotlight(rect);
+      await bubble(`Bravo ! Chaque alignement remplit cette barre.<br>Atteins le premier ${ICONS.star} pour gagner,
+        les deux suivants pour un score parfait.`, { near: rect, button: "Suite" });
     } else if (st.info === "line") {
       const rect = cellsRect([[3, 6]]);
       spotlight(rect, true);
       await bubble("Voici une <b>note rayée</b> ! Quand elle est déclenchée, elle efface toute sa rangée.", { near: rect, button: "Suite" });
     } else if (st.info === "end") {
       spotlight(null);
-      await bubble(`Excellent ! Pense aussi à :<ul class="tut-list">
-        <li>${gemHtml(4, "bomb")} aligner en <b>L ou en T</b> → une bombe ;</li>
-        <li>${gemHtml(RAINBOW)} aligner <b>5 notes</b> → une étoile qui efface toute une couleur.</li></ul>
+      await bubble(`<b>Selon les niveaux, l'objectif change :</b><ul class="tut-list">
+        <li><span class="tut-ico star-mini">${ICONS.star}</span><span>marquer un nombre de <b>points</b> ;</span></li>
+        <li>${g(1)}<span><b>récolter</b> des notes d'une couleur ;</span></li>
+        <li><span class="tut-ico ice-mini">❄&#xFE0E;</span><span><b>dégeler</b> les cases givrées.</span></li></ul>
+        Il faut toujours réussir <b>avant la fin des coups</b>. Les coups restants deviennent des points bonus !`, { button: "Suite" });
+      await bubble(`Dernières astuces :<ul class="tut-list">
+        <li>${g(4, "bomb")}<span>5 notes en <b>L ou en T</b> → une bombe ;</span></li>
+        <li>${g(RAINBOW)}<span><b>5 notes</b> en ligne → une étoile qui efface toute une couleur.</span></li></ul>
         À toi de jouer !`, { button: "Jouer" });
     }
   }
@@ -836,21 +874,62 @@ function goalsDone() {
 }
 const hasSideGoals = () => Object.keys(level.collect).length > 0 || level.ice.length > 0;
 
-function goalChips(lv, withProgress) {
+/** Liste des objectifs d'un niveau : { id, icon, total, left, label } */
+function goalList(lv, withProgress) {
   const out = [];
   for (const [col, n] of Object.entries(lv.collect)) {
-    const left = withProgress ? Math.max(0, n - (collected[col] || 0)) : n;
-    out.push(`<div class="goal ${left ? "" : "done"}" data-goal="${col}"><span class="mini">${gemHtml(+col)}</span><b>${left || "✓"}</b></div>`);
+    out.push({ id: "c" + col, color: +col, icon: `<span class="mini">${gemHtml(+col)}</span>`, total: n,
+      left: withProgress ? Math.max(0, n - (collected[col] || 0)) : n, verb: "Récolte", what: "notes" });
   }
   if (lv.ice.length) {
-    const left = withProgress ? ice.flat().filter((v) => v > 0).length : lv.ice.length;
-    out.push(`<div class="goal ${left ? "" : "done"}"><span class="mini ice-mini">❄︎</span><b>${left || "✓"}</b></div>`);
+    out.push({ id: "ice", icon: `<span class="mini ice-mini">❄&#xFE0E;</span>`, total: lv.ice.length,
+      left: withProgress ? ice.flat().filter((v) => v > 0).length : lv.ice.length, verb: "Dégèle", what: "cases" });
   }
-  if (!Object.keys(lv.collect).length && !lv.ice.length) {
-    const done = withProgress && score >= lv.target;
-    out.push(`<div class="goal ${done ? "done" : ""}"><span class="mini star-mini">${ICONS.star}</span><b>${done ? "✓" : fmt(lv.target)}</b></div>`);
+  if (!out.length) {
+    out.push({ id: "score", score: true, icon: `<span class="mini star-mini">${ICONS.star}</span>`, total: lv.target,
+      left: withProgress ? Math.max(0, lv.target - score) : lv.target, verb: "Marque", what: "points" });
   }
-  return out.join("");
+  return out;
+}
+/** Phrase d'objectif, lisible d'un coup d'œil : « Récolte 15 ♪ », « Marque 3 000 points »… */
+function goalSentence(lv) {
+  return goalList(lv, false).map((gl) => gl.color !== undefined
+    ? `<span class="gs-line">${gl.verb} <b>${gl.total}</b> ${gl.icon}</span>`
+    : `<span class="gs-line">${gl.verb} <b>${fmt(gl.total)}</b> ${gl.what} ${gl.icon}</span>`).join("");
+}
+let prevGoals = {};
+function goalChips(lv, withProgress) {
+  return goalList(lv, withProgress).map((gl) => {
+    const done = withProgress && gl.left === 0;
+    const bump = withProgress && prevGoals[gl.id] !== undefined && prevGoals[gl.id] !== gl.left;
+    if (withProgress) prevGoals[gl.id] = gl.left;
+    const pctDone = Math.round(((gl.total - gl.left) / gl.total) * 100);
+    const value = gl.score
+      ? (withProgress ? `<b>${fmt(Math.min(score, gl.total))}</b><small>/ ${fmt(gl.total)}</small>` : `<b>${fmt(gl.total)}</b><small>points</small>`)
+      : `<b>${done ? "✓" : gl.left}</b>${withProgress && !done ? `<small>${gl.left > 1 ? "restantes" : "restante"}</small>` : ""}`;
+    return `<div class="goal ${done ? "done" : ""} ${bump ? "bump" : ""}" ${gl.color !== undefined ? `data-goal="${gl.color}"` : ""}>
+      ${gl.icon}<span class="goal-val">${value}</span>
+      ${withProgress ? `<span class="goal-bar"><i style="width:${pctDone}%"></i></span>` : ""}</div>`;
+  }).join("");
+}
+
+/** Grande carte « Objectif » au début du niveau, qui rejoint ensuite le bandeau du haut. */
+async function goalSplash() {
+  const el = $("#goal-splash");
+  el.innerHTML = `<small class="eyebrow">Niveau ${level.number}</small><div class="gs-title">Objectif</div>
+    <div class="gs-goals">${goalSentence(level)}</div><div class="gs-moves">en <b>${level.moves}</b> coups</div>`;
+  el.hidden = false;
+  el.className = "in";
+  Sound.star();
+  await sleep(2100);
+  const from = el.getBoundingClientRect(), to = $(".goals-wrap").getBoundingClientRect();
+  el.style.setProperty("--tx", to.left + to.width / 2 - (from.left + from.width / 2) + "px");
+  el.style.setProperty("--ty", to.top + to.height / 2 - (from.top + from.height / 2) + "px");
+  el.className = "out";
+  await sleep(520);
+  el.hidden = true;
+  const w = $(".goals-wrap");
+  w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash");
 }
 
 let scoreAnim = 0;
@@ -858,6 +937,7 @@ function updateHud() {
   $("#moves").textContent = Math.max(0, moves);
   $("#moves-badge").classList.toggle("low", moves <= 5 && !ended);
   $("#goals").innerHTML = goalChips(level, true);
+  $("#goals").dataset.n = goalList(level, false).length;
   const pct = Math.min(100, (score / (level.target * STAR_STEPS[2])) * 100);
   $("#progress-fill").style.width = pct + "%";
   document.querySelectorAll(".progress i").forEach((el, i) => el.classList.toggle("on", score >= level.target * STAR_STEPS[i]));
@@ -874,7 +954,7 @@ function updateHud() {
 }
 
 function flyToGoal(color, r, c) {
-  const goal = document.querySelector(`[data-goal="${color}"] .mini`);
+  const goal = document.querySelector(`#goals [data-goal="${color}"] .mini`);
   if (!goal) return;
   const [x, y] = cellCenter(r, c);
   const g = goal.getBoundingClientRect();
@@ -920,8 +1000,8 @@ function levelCard(index) {
   const st = save.stars[index] || 0;
   modal(`<small class="eyebrow">${worldOf(index).name}</small><h2>Niveau ${lv.number}</h2>
     <div class="stars small">${[1, 2, 3].map((n) => `<span class="star ${n <= st ? "on" : ""}">${ICONS.star}</span>`).join("")}</div>
-    <p class="muted">Objectif en ${lv.moves} coups</p>
-    <div class="goals-card">${goalChips(lv, false)}</div>
+    <div class="goal-box"><small class="eyebrow">Objectif</small><div class="gs-goals">${goalSentence(lv)}</div>
+      <div class="gs-moves">en <b>${lv.moves}</b> coups</div></div>
     ${save.best[index] ? `<p class="muted">Meilleur score : ${fmt(save.best[index])}</p>` : ""}
     <button class="btn big" data-act="play">${ICONS.play} Jouer</button>
     <button class="btn ghost" data-act="close">Retour</button>`, (act) => { if (act === "play") startLevel(index); });
@@ -939,6 +1019,7 @@ async function startLevel(index, { replayTutorial = false } = {}) {
   const b = boardEl();
   b.innerHTML = "";
   $("#level-title").textContent = "Niveau " + level.number;
+  prevGoals = {};
   layout();
   ice = Array.from({ length: N }, () => Array(N).fill(0));
   for (const [r, c, l] of level.ice) ice[r][c] = l;
@@ -983,20 +1064,16 @@ async function startLevel(index, { replayTutorial = false } = {}) {
   busy = false;
 
   if (withTutorial && preset) { runTutorial(); return; }
+  busy = true;
+  await goalSplash();
+  busy = false;
   if (level.intro && !save.intros[level.intro]) {
     await introCard(level.intro);
     save.intros[level.intro] = true; persist();
-  } else {
-    banner(objectiveText(level), "small");
   }
   scheduleHint();
 }
 
-function objectiveText(lv) {
-  if (Object.keys(lv.collect).length) return "Récolte les notes !";
-  if (lv.ice.length) return "Dégèle toutes les cases !";
-  return `Objectif : ${fmt(lv.target)} points`;
-}
 
 const INTROS = {
   collect: {
@@ -1039,7 +1116,7 @@ function introCard(id) {
 
 async function checkEnd() {
   if (ended || tut) return;
-  const won = goalsDone() && score >= level.target;
+  const won = hasSideGoals() ? goalsDone() : score >= level.target;
   if ((hasSideGoals() && won) || moves <= 0) {
     ended = true;
     clearHint();
@@ -1122,7 +1199,7 @@ function onWin() {
 
 function onOutOfMoves() {
   Sound.lose();
-  const reason = score < level.target && goalsDone() ? "Il manque des points…" : "Plus de coups !";
+  const reason = hasSideGoals() ? "Plus de coups !" : "Il manque des points…";
   modal(`<h2>${reason}</h2>
     <div class="goals-card">${goalChips(level, true)}</div>
     ${!extraMovesUsed ? `<p>Regarde une courte vidéo pour obtenir <b>5 coups de plus</b>.</p>

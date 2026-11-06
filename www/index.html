@@ -73,7 +73,7 @@
     <header class="hud">
       <button id="pause" class="icon-btn" data-icon="pause" aria-label="Pause"></button>
       <div id="moves-badge" class="moves-badge"><b id="moves">0</b><small>coups</small></div>
-      <div class="goals-wrap"><small id="level-title">Niveau</small><div id="goals"></div></div>
+      <div class="goals-wrap"><div class="goals-head"><span>Objectif</span><small id="level-title">Niveau</small></div><div id="goals"></div></div>
     </header>
     <div class="scorebar">
       <div class="progress"><div id="progress-fill"></div>
@@ -83,6 +83,7 @@
     <div class="board-wrap">
       <div class="board-frame"><div id="board"></div></div>
       <div id="cheer"></div>
+      <div id="goal-splash" hidden></div>
     </div>
     <footer class="boosters">
       <button class="booster" data-booster="hammer" data-icon="hammer" aria-label="Marteau"><span class="count">3</span><small>Marteau</small></button>
@@ -114,6 +115,7 @@
   <!-- Tutoriel -->
   <div id="tut" hidden>
     <div id="tut-spot" hidden></div>
+    <div id="tut-run" hidden><b>3</b></div>
     <div id="tut-hand" hidden><span class="finger"></span></div>
     <div id="tut-bubble" hidden></div>
   </div>
